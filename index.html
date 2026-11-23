@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<title>Limit Quest – Limites, Continuité &amp; GeoGebra</title>
+<title>Limit Quest – Limites, Continuité &amp; Sons</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
@@ -46,6 +46,73 @@
 </div>
 
 <script>
+/* ============ GESTIONNAIRE AUDIO (Web Audio API) ============ */
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+function playSound(type) {
+  if (audioCtx.state === 'suspended') {
+    audioCtx.resume();
+  }
+  const now = audioCtx.currentTime;
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+
+  if (type === 'success') {
+    // Accord montant joyeux
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(440, now); // La4
+    osc.frequency.setValueAtTime(554.37, now + 0.1); // Do#5
+    osc.frequency.setValueAtTime(659.25, now + 0.2); // Mi5
+    gain.gain.setValueAtTime(0.2, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+    osc.start(now);
+    osc.stop(now + 0.4);
+  } else if (type === 'error') {
+    // Son grave descendant
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(180, now);
+    osc.frequency.linearRampToValueAtTime(100, now + 0.3);
+    gain.gain.setValueAtTime(0.2, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+    osc.start(now);
+    osc.stop(now + 0.3);
+  } else if (type === 'click') {
+    // Petit déclic
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(600, now);
+    gain.gain.setValueAtTime(0.1, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+    osc.start(now);
+    osc.stop(now + 0.05);
+  } else if (type === 'hit') {
+    // Impact tranchant (Boss)
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(120, now);
+    osc.frequency.exponentialRampToValueAtTime(40, now + 0.2);
+    gain.gain.setValueAtTime(0.3, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+    osc.start(now);
+    osc.stop(now + 0.2);
+  } else if (type === 'win') {
+    // Fanfare de victoire
+    const notes = [523.25, 659.25, 783.99, 1046.50]; // Do5, Mi5, Sol5, Do6
+    notes.forEach((freq, idx) => {
+      const o = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      o.connect(g);
+      g.connect(audioCtx.destination);
+      o.type = 'triangle';
+      o.frequency.setValueAtTime(freq, now + idx * 0.12);
+      g.gain.setValueAtTime(0.2, now + idx * 0.12);
+      g.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.12 + 0.3);
+      o.start(now + idx * 0.12);
+      o.stop(now + idx * 0.12 + 0.3);
+    });
+  }
+}
+
 /* ============ BANQUES DE QUESTIONS EN LATEX ============ */
 const QCM = [
  {lvl:1,q:"$\\displaystyle\\lim_{x\\to+\\infty} x^2$",o:["$0$","$+\\infty$","$-\\infty$","$1$"],a:1,e:"Les puissances positives de $x$ tendent vers $+\\infty$."},
@@ -149,6 +216,7 @@ function setScreen(html){
 }
 
 function goHome(){
+  playSound('click');
   if(confirm("Quitter la partie et revenir au menu principal ?\n(Les XP déjà gagnés sont conservés)")){
     inGame = false;
     menu();
@@ -158,6 +226,7 @@ function goHome(){
 /* ============ MENU PRINCIPAL ============ */
 function menu(){
   inGame = false;
+  playSound('click');
   setScreen(`
   <div class="card">
     <div class="bar"><span>Niveau : ${levelName()}</span><span>⭐ ${state.xp} XP</span></div>
@@ -165,18 +234,18 @@ function menu(){
   </div>
   <div class="card menu">
     <h2>Choisis ton mode de jeu</h2>
-    <button onclick="startQuiz(1)">🟢 Quiz – Niveau 1 : Limites usuelles</button>
-    <button onclick="startQuiz(2)">🟡 Quiz – Niveau 2 : Formes indéterminées</button>
-    <button onclick="startQuiz(3)">🔴 Quiz – Niveau 3 : Croissances comparées</button>
-    <button onclick="startContinuity()">📘 Quiz – Continuité &amp; TVI</button>
-    <button onclick="startChrono()">⏱️ Mode Chrono (10 s par question)</button>
-    <button onclick="startAsymp()">📈 Chasse aux asymptotes</button>
-    <button onclick="startDuel()">⚔️ Mode Duel (2 Joueurs)</button>
-    <button onclick="startGeoGebra()">🔍 Visualiseur GeoGebra &amp; Asymptotes</button>
-    <button onclick="startVF()">✅ Vrai ou Faux ?</button>
-    <button onclick="startBoss()">🐉 Duel du Boss (réponses à saisir)</button>
-    <button onclick="startMemory()">🃏 Memory : fonction ↔ limite</button>
-    <button style="background:#94a3b8" onclick="if(confirm('Réinitialiser la progression ?')){state={xp:0,badges:[]};save();menu()}">Réinitialiser</button>
+    <button onclick="playSound('click');startQuiz(1)">🟢 Quiz – Niveau 1 : Limites usuelles</button>
+    <button onclick="playSound('click');startQuiz(2)">🟡 Quiz – Niveau 2 : Formes indéterminées</button>
+    <button onclick="playSound('click');startQuiz(3)">🔴 Quiz – Niveau 3 : Croissances comparées</button>
+    <button onclick="playSound('click');startContinuity()">📘 Quiz – Continuité &amp; TVI</button>
+    <button onclick="playSound('click');startChrono()">⏱️ Mode Chrono (10 s par question)</button>
+    <button onclick="playSound('click');startAsymp()">📈 Chasse aux asymptotes</button>
+    <button onclick="playSound('click');startDuel()">⚔️ Mode Duel (2 Joueurs)</button>
+    <button onclick="playSound('click');startGeoGebra()">🔍 Visualiseur GeoGebra &amp; Asymptotes</button>
+    <button onclick="playSound('click');startVF()">✅ Vrai ou Faux ?</button>
+    <button onclick="playSound('click');startBoss()">🐉 Duel du Boss (réponses à saisir)</button>
+    <button onclick="playSound('click');startMemory()">🃏 Memory : fonction ↔ limite</button>
+    <button style="background:#94a3b8" onclick="playSound('click');if(confirm('Réinitialiser la progression ?')){state={xp:0,badges:[]};save();menu()}">Réinitialiser</button>
   </div>`);
 }
 
@@ -197,7 +266,7 @@ function runQCM(questions,{title,timer=0,xpPer=10,badge=null}){
       <div class="q">${q.q}</div>
       ${q.o.map((o,k)=>`<button class="opt" data-k="${k}">${o}</button>`).join("")}
       <div id="fb"></div></div>`);
-    document.querySelectorAll(".opt").forEach(b=>b.onclick=()=>answer(+b.dataset.k));
+    document.querySelectorAll(".opt").forEach(b=>b.onclick=()=>{playSound('click');answer(+b.dataset.k)});
     if(timer){
       let left=timer*10;
       t=setInterval(()=>{
@@ -215,17 +284,29 @@ function runQCM(questions,{title,timer=0,xpPer=10,badge=null}){
     const q=qs[i],btns=document.querySelectorAll(".opt");
     btns.forEach(b=>b.onclick=null);
     btns[q.a].classList.add("ok");
-    if(k===q.a){score++;state.xp+=xpPer}else{lives--;if(k>=0)btns[k].classList.add("ko")}
+    if(k===q.a){
+      score++;state.xp+=xpPer;
+      playSound('success');
+    } else {
+      lives--;
+      if(k>=0)btns[k].classList.add("ko");
+      playSound('error');
+    }
     $("#fb").innerHTML=`<div class="fb">${k===q.a?"✅ Bravo !":k<0?"⏰ Temps écoulé !":"❌ Raté."} ${q.e}</div><button class="opt next" id="nx">Suivant ➜</button>`;
     render($("#fb"));
-    $("#nx").onclick=()=>{i++;show()};
+    $("#nx").onclick=()=>{playSound('click');i++;show()};
     save();
   }
 
   function end(){
     inGame = false;
     const win=score>=Math.ceil(qs.length*0.7);
-    if(win&&badge)addBadge(badge);
+    if(win){
+      if(badge)addBadge(badge);
+      playSound('win');
+    } else {
+      playSound('error');
+    }
     if(score===qs.length)addBadge("💯 Sans faute – "+title);
     save();
     setScreen(`<div class="card" style="text-align:center">
@@ -266,7 +347,7 @@ function startDuel(){
       <div class="q">${q.q}</div>
       ${q.o.map((o,k)=>`<button class="opt" data-k="${k}">${o}</button>`).join("")}
       <div id="fb"></div></div>`);
-    document.querySelectorAll(".opt").forEach(b=>b.onclick=()=>answer(+b.dataset.k));
+    document.querySelectorAll(".opt").forEach(b=>b.onclick=()=>{playSound('click');answer(+b.dataset.k)});
   }
 
   function answer(k){
@@ -277,12 +358,15 @@ function startDuel(){
     const correct = (k === q.a);
     if(correct){
       if(turn === 1) p1Score++; else p2Score++;
-    } else if(k >= 0){
-      btns[k].classList.add("ko");
+      playSound('success');
+    } else {
+      if(k >= 0) btns[k].classList.add("ko");
+      playSound('error');
     }
     $("#fb").innerHTML=`<div class="fb">${correct?"✅ Bonne réponse pour J"+turn+" !":"❌ Raté."} ${q.e}</div><button class="opt next" id="nx">Joueur suivant ➜</button>`;
     render($("#fb"));
     $("#nx").onclick = () => {
+      playSound('click');
       turn = turn === 1 ? 2 : 1;
       if(turn === 1) i++;
       show();
@@ -293,6 +377,7 @@ function startDuel(){
     inGame = false;
     let winner = p1Score > p2Score ? "🏆 Victoire du Joueur 1 (🔵) !" : p2Score > p1Score ? "🏆 Victoire du Joueur 2 (🔴) !" : "🤝 Égalité parfaite !";
     state.xp += 30; addBadge("⚔️ Duelliste"); save();
+    playSound('win');
     setScreen(`<div class="card" style="text-align:center">
       <h2>Fin du Duel !</h2>
       <p style="font-size:1.4em;font-weight:bold">${winner}</p>
@@ -309,9 +394,9 @@ function startGeoGebra(){
     <h2>Visualiseur GeoGebra &amp; Asymptotes</h2>
     <p>Explore les fonctions et leurs asymptotes dynamiquement :</p>
     <div class="menu" style="display:flex;gap:8px;flex-wrap:wrap">
-      <button onclick="loadGGB('f(x)=(2x+1)/(x-3)')" style="flex:1">$\\displaystyle f(x)=\\frac{2x+1}{x-3}$</button>
-      <button onclick="loadGGB('f(x)=e^x+3')" style="flex:1">$\\displaystyle f(x)=e^x+3$</button>
-      <button onclick="loadGGB('f(x)=(x^2+1)/(x-1)')" style="flex:1">$\\displaystyle f(x)=\\frac{x^2+1}{x-1}$</button>
+      <button onclick="playSound('click');loadGGB('f(x)=(2x+1)/(x-3)')" style="flex:1">$\\displaystyle f(x)=\\frac{2x+1}{x-3}$</button>
+      <button onclick="playSound('click');loadGGB('f(x)=e^x+3')" style="flex:1">$\\displaystyle f(x)=e^x+3$</button>
+      <button onclick="playSound('click');loadGGB('f(x)=(x^2+1)/(x-1)')" style="flex:1">$\\displaystyle f(x)=\\frac{x^2+1}{x-1}$</button>
     </div>
     <div class="ggb-container">
       <iframe id="ggbFrame" src="https://www.geogebra.org/classic?embed&amp;showToolBar=false&amp;showAlgebraInput=false&amp;showMenuBar=false"></iframe>
@@ -323,7 +408,6 @@ function startGeoGebra(){
 }
 
 function loadGGB(expr){
-  // Met à jour la description en LaTeX selon la fonction choisie
   let desc = "";
   if(expr.includes("2x+1")){
     desc = "<b>Analyse de $\\displaystyle f(x) = \\frac{2x+1}{x-3}$</b><br>• Asymptote verticale : $\\mathbf{x = 3}$<br>• Asymptote horizontale en $\\pm\\infty$ : $\\mathbf{y = 2}$";
@@ -344,19 +428,23 @@ function startVF(){
     if(i>=qs.length){
       inGame=false;
       if(score>=4)addBadge("🧠 Esprit critique");save();
+      playSound('win');
       return setScreen(`<div class="card" style="text-align:center"><h2>Score : ${score}/${qs.length}</h2><div class="menu"><button onclick="menu()">Menu</button></div></div>`)
     }
     setScreen(`<div class="card"><div class="bar"><span>Vrai ou Faux</span><span>${i+1}/${qs.length}</span></div>
       <div class="q">${qs[i].q}</div>
       <button class="opt" id="v">✅ Vrai</button><button class="opt" id="f">❌ Faux</button><div id="fb"></div></div>`);
-    $("#v").onclick=()=>rep(true);$("#f").onclick=()=>rep(false);
+    $("#v").onclick=()=>{playSound('click');rep(true)};
+    $("#f").onclick=()=>{playSound('click');rep(false)};
   }
   function rep(r){
-    const ok=r===qs[i].a;if(ok){score++;state.xp+=10}save();
+    const ok=r===qs[i].a;
+    if(ok){score++;state.xp+=10;playSound('success')}else{playSound('error')}
+    save();
     $("#v").onclick=$("#f").onclick=null;
     $("#fb").innerHTML=`<div class="fb">${ok?"✅ Exact !":"❌ Non."} ${qs[i].e}</div><button class="opt next" id="nx">Suivant ➜</button>`;
     render($("#fb"));
-    $("#nx").onclick=()=>{i++;show()};
+    $("#nx").onclick=()=>{playSound('click');i++;show()};
   }
   show();
 }
@@ -370,10 +458,12 @@ function startBoss(){
     if(hp<=1){
       inGame=false;
       addBadge("🐉 Tueur de Boss");state.xp+=100;save();
+      playSound('win');
       return setScreen(`<div class="card" style="text-align:center"><h2>🎉 Le Boss est vaincu ! +100 XP</h2><div class="menu"><button onclick="menu()">Menu</button></div></div>`)
     }
     if(me<=0||i>=qs.length){
       inGame=false;
+      playSound('error');
       return setScreen(`<div class="card" style="text-align:center"><h2>💀 Le Boss t'a vaincu…</h2><p>Révise et reviens !</p><div class="menu"><button onclick="menu()">Menu</button></div></div>`)
     }
     setScreen(`<div class="card">
@@ -385,9 +475,10 @@ function startBoss(){
       <button class="opt next" id="go">⚔️ Attaquer</button></div>`);
     $("#ans").addEventListener("keydown",e=>{if(e.key==="Enter")$("#go").click()});
     $("#go").onclick=()=>{
+      playSound('click');
       const v=norm($("#ans").value);const ok=qs[i].a.map(norm).includes(v);
       const e=qs[i].e;i++;
-      if(ok){hp-=dmg;state.xp+=15;save();show("✅ Touché ! "+e)}else{me--;show("❌ Raté. "+e)}
+      if(ok){hp-=dmg;state.xp+=15;save();playSound('hit');show("✅ Touché ! "+e)}else{me--;playSound('error');show("❌ Raté. "+e)}
     };
   }
   show();
@@ -407,6 +498,7 @@ function startMemory(){
     b.className="mem";b.textContent="?";
     b.onclick=()=>{
       if(lock||b.dataset.done||open.includes(b))return;
+      playSound('click');
       b.innerHTML=c.t;render(b);b.style.background="#fbbf24";b.style.color="#1e1b4b";open.push(b);b._c=c;
       if(open.length===2){
         moves++;$("#mv").textContent="Coups : "+moves;
@@ -416,12 +508,15 @@ function startMemory(){
           x.style.background=y.style.background="#22c55e";
           x.style.color=y.style.color="#fff";
           open=[];found++;
+          playSound('success');
           if(found===PAIRS.length){
             state.xp+=50;addBadge("🃏 Mémoire d'éléphant");save();
+            playSound('win');
             setTimeout(()=>alert("Bravo en "+moves+" coups ! +50 XP"),200);
           }
         } else {
           lock=true;
+          playSound('error');
           setTimeout(()=>{
             open.forEach(z=>{z.textContent="?";z.style.background="#6366f1";z.style.color="#fff"});
             open=[];lock=false;
