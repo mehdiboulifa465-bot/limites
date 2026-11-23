@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Limit Quest – Limites, Continuité &amp; GeoGebra</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<style>
+  *{box-sizing:border-box}
+  body{font-family:Segoe UI,Arial,sans-serif;background:linear-gradient(135deg,#1e1b4b,#4338ca);color:#fff;margin:0;min-height:100vh;display:flex;justify-content:center;padding:20px}
+  #app{max-width:850px;width:100%}
+  h1{text-align:center;margin:0 0 10px}
+  .card{background:#fff;color:#1e1b4b;border-radius:16px;padding:22px;margin:14px 0;box-shadow:0 8px 24px rgba(0,0,0,.3)}
+  .menu button,.opt{display:block;width:100%;margin:8px 0;padding:14px;border:none;border-radius:12px;font-size:1.05em;cursor:pointer;background:#6366f1;color:#fff;transition:.15s}
+  .menu button:hover,.opt:hover{transform:scale(1.02);background:#4f46e5}
+  .opt{background:#e0e7ff;color:#1e1b4b;text-align:left}
+  .opt.ok{background:#22c55e;color:#fff}.opt.ko{background:#ef4444;color:#fff}
+  .opt.next{background:#6366f1;color:#fff;text-align:center}
+  .bar{display:flex;justify-content:space-between;font-weight:bold;margin-bottom:8px;gap:8px;flex-wrap:wrap}
+  .q{font-size:1.3em;text-align:center;margin:16px 0;min-height:60px}
+  .fb{margin-top:10px;padding:10px;border-radius:8px;background:#f1f5f9;font-size:.95em}
+  .timer{height:8px;background:#c7d2fe;border-radius:4px;overflow:hidden}
+  .timer div{height:100%;background:#f59e0b;width:100%}
+  input[type=text]{width:100%;padding:12px;font-size:1.1em;border:2px solid #6366f1;border-radius:10px}
+  .badge{display:inline-block;background:#fde68a;color:#78350f;border-radius:20px;padding:4px 12px;margin:3px;font-size:.9em}
+  .boss-hp{height:18px;background:#fecaca;border-radius:9px;overflow:hidden}
+  .boss-hp div{height:100%;background:#dc2626;transition:width .4s}
+  .mem{height:80px;border:none;border-radius:10px;background:#6366f1;color:#fff;font-size:.95em;cursor:pointer;padding:4px}
+  .katex{font-size:1.05em}
+  #homeBtn{position:fixed;top:12px;left:12px;z-index:100;display:none;padding:10px 16px;border:none;border-radius:25px;
+    background:#fbbf24;color:#1e1b4b;font-weight:bold;font-size:1em;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,.35);transition:.15s}
+  #homeBtn:hover{background:#f59e0b;transform:scale(1.05)}
+  body.in-game #homeBtn{display:block}
+  body.in-game h1{margin-top:45px}
+  .ggb-container{position:relative;width:100%;height:450px;border-radius:12px;overflow:hidden;border:2px solid #cbd5e1;margin:15px 0}
+  iframe{width:100%;height:100%;border:none}
+</style>
+</head>
+<body>
+<button id="homeBtn" onclick="goHome()">🏠 Menu</button>
+<div id="app">
+  <h1>♾️ Limit Quest</h1>
+  <div id="screen"></div>
+</div>
+
+<script>
+/* ============ BANQUES DE QUESTIONS EN LATEX ============ */
+const QCM = [
+ {lvl:1,q:"$\\displaystyle\\lim_{x\\to+\\infty} x^2$",o:["$0$","$+\\infty$","$-\\infty$","$1$"],a:1,e:"Les puissances positives de $x$ tendent vers $+\\infty$."},
+ {lvl:1,q:"$\\displaystyle\\lim_{x\\to-\\infty} x^3$",o:["$+\\infty$","$0$","$-\\infty$","Pas de limite"],a:2,e:"$x^3$ est impair : négatif quand $x\\to-\\infty$."},
+ {lvl:1,q:"$\\displaystyle\\lim_{x\\to+\\infty} \\frac{1}{x}$",o:["$+\\infty$","$0$","$1$","$-\\infty$"],a:1,e:"L'inverse d'un très grand nombre est proche de $0$."},
+ {lvl:1,q:"$\\displaystyle\\lim_{x\\to0^+} \\frac{1}{x}$",o:["$0$","$-\\infty$","$+\\infty$","$1$"],a:2,e:"$x>0$ très petit $\\Rightarrow \\frac1x$ très grand positif."},
+ {lvl:1,q:"$\\displaystyle\\lim_{x\\to0^-} \\frac{1}{x}$",o:["$+\\infty$","$-\\infty$","$0$","Pas de limite"],a:1,e:"$x<0$ très petit $\\Rightarrow \\frac1x$ très grand négatif."},
+ {lvl:1,q:"$\\displaystyle\\lim_{x\\to+\\infty} e^{x}$",o:["$0$","$1$","$+\\infty$","$-\\infty$"],a:2,e:"Croissance exponentielle."},
+ {lvl:1,q:"$\\displaystyle\\lim_{x\\to-\\infty} e^{x}$",o:["$0$","$-\\infty$","$+\\infty$","$1$"],a:0,e:"$e^x\\to0$ en $-\\infty$ : asymptote horizontale $y=0$."},
+ {lvl:1,q:"$\\displaystyle\\lim_{x\\to+\\infty} \\ln x$",o:["$0$","$+\\infty$","$-\\infty$","$e$"],a:1,e:"$\\ln$ croît lentement mais tend vers $+\\infty$."},
+ {lvl:1,q:"$\\displaystyle\\lim_{x\\to0^+} \\ln x$",o:["$+\\infty$","$0$","$-\\infty$","$1$"],a:2,e:"$\\ln x\\to-\\infty$ : asymptote verticale $x=0$."},
+ {lvl:1,q:"$\\displaystyle\\lim_{x\\to+\\infty} \\sqrt{x}$",o:["$0$","$+\\infty$","$1$","$-\\infty$"],a:1,e:"La racine carrée tend vers $+\\infty$."},
+ 
+ {lvl:2,q:"$\\displaystyle\\lim_{x\\to+\\infty} (x^2-3x+1)$",o:["$-\\infty$","$0$","$+\\infty$","$1$"],a:2,e:"FI « $\\infty-\\infty$ » : $x^2\\left(1-\\frac3x+\\frac1{x^2}\\right)\\to+\\infty$."},
+ {lvl:2,q:"$\\displaystyle\\lim_{x\\to+\\infty} \\frac{2x+1}{x-3}$",o:["$+\\infty$","$2$","$1$","$0$"],a:1,e:"Quotient des termes de plus haut degré : $\\frac{2x}{x}=2$."},
+ {lvl:2,q:"$\\displaystyle\\lim_{x\\to+\\infty} \\frac{3x^2+1}{x^3+2}$",o:["$3$","$+\\infty$","$0$","$1$"],a:2,e:"Degré du dénominateur supérieur $\\Rightarrow$ limite $0$."},
+ {lvl:2,q:"$\\displaystyle\\lim_{x\\to+\\infty} \\frac{x^3+1}{x+2}$",o:["$0$","$1$","$+\\infty$","$-\\infty$"],a:2,e:"Degré du numérateur supérieur : $\\frac{x^3}{x}=x^2\\to+\\infty$."},
+ {lvl:2,q:"$\\displaystyle\\lim_{x\\to2^+} \\frac{1}{x-2}$",o:["$-\\infty$","$+\\infty$","$0$","$1$"],a:1,e:"$x-2\\to0^+$ donc l'inverse $\\to+\\infty$."},
+ {lvl:2,q:"$\\displaystyle\\lim_{x\\to2^-} \\frac{3}{x-2}$",o:["$+\\infty$","$-\\infty$","$0$","$3$"],a:1,e:"$x-2\\to0^-$ donc $\\frac{3}{x-2}\\to-\\infty$."},
+ {lvl:2,q:"$\\displaystyle\\lim_{x\\to+\\infty} \\left(\\sqrt{x+1}-\\sqrt{x}\\right)$",o:["$+\\infty$","$1$","$0$","$-\\infty$"],a:2,e:"Quantité conjuguée : $\\frac{1}{\\sqrt{x+1}+\\sqrt x}\\to0$."},
+ {lvl:2,q:"$\\displaystyle\\lim_{x\\to+\\infty} \\left(e^{x}-x\\right)$",o:["$-\\infty$","$0$","$1$","$+\\infty$"],a:3,e:"Croissances comparées : $e^x$ l'emporte sur $x$."},
+ {lvl:2,q:"$\\displaystyle\\lim_{x\\to0} \\frac{\\sin x}{x}$",o:["$0$","$1$","$+\\infty$","Pas de limite"],a:1,e:"Limite de référence : dérivée de $\\sin$ en $0$."},
+
+ {lvl:3,q:"$\\displaystyle\\lim_{x\\to+\\infty} \\frac{e^{x}}{x^2}$",o:["$0$","$1$","$+\\infty$","$e$"],a:2,e:"Croissances comparées : $e^x$ domine toute puissance de $x$."},
+ {lvl:3,q:"$\\displaystyle\\lim_{x\\to+\\infty} \\frac{\\ln x}{x}$",o:["$+\\infty$","$1$","$0$","$-\\infty$"],a:2,e:"Croissances comparées : $x$ domine $\\ln x$."},
+ {lvl:3,q:"$\\displaystyle\\lim_{x\\to0^+} x\\ln x$",o:["$-\\infty$","$0$","$+\\infty$","$1$"],a:1,e:"Croissance comparée : $x\\ln x\\to0$."},
+ {lvl:3,q:"$\\displaystyle\\lim_{x\\to-\\infty} x\\,e^{x}$",o:["$-\\infty$","$+\\infty$","$0$","$1$"],a:2,e:"Poser $X=-x$ : $-Xe^{-X}=-\\frac{X}{e^X}\\to0$."},
+ {lvl:3,q:"Si $f(x)\\ge g(x)$ et $\\displaystyle\\lim_{+\\infty} g=+\\infty$, alors $\\displaystyle\\lim_{+\\infty} f$ vaut :",o:["$0$","$+\\infty$","On ne peut pas conclure","$-\\infty$"],a:1,e:"Théorème de comparaison (minoration)."},
+ {lvl:3,q:"Si $|f(x)|\\le \\frac1x$ pour $x>0$, alors $\\displaystyle\\lim_{+\\infty} f$ vaut :",o:["$1$","$+\\infty$","$0$","Aucune limite"],a:2,e:"Théorème des gendarmes : $-\\frac1x\\le f(x)\\le\\frac1x$."},
+ {lvl:3,q:"$\\displaystyle\\lim_{x\\to+\\infty} \\frac{\\sin x}{x}$",o:["$1$","$0$","$+\\infty$","Pas de limite"],a:1,e:"Gendarmes : $-\\frac1x\\le\\frac{\\sin x}{x}\\le\\frac1x$."},
+ {lvl:3,q:"$\\displaystyle\\lim_{x\\to+\\infty} \\left(1+\\frac1x\\right)^{x}$",o:["$1$","$+\\infty$","$e$","$0$"],a:2,e:"$\\left(1+\\frac1x\\right)^x=e^{x\\ln(1+1/x)}\\to e^1$."},
+ {lvl:3,q:"$\\displaystyle\\lim_{x\\to+\\infty} e^{-x^2}$",o:["$+\\infty$","$1$","$0$","$-\\infty$"],a:2,e:"Composition : $-x^2\\to-\\infty$ puis $e^{X}\\to0$ quand $X\\to-\\infty$."}
+];
+
+const CONTINUITY = [
+ {q:"Si $f$ est continue sur $[a, b]$ et $f(a)f(b) < 0$, alors l'équation $f(x)=0$ admet :",o:["Au moins une solution dans $]a, b[$","Exactement une solution","Aucune solution","Une infinité de solutions"],a:0,e:"C'est le corollaire du théorème des valeurs intermédiaires (TVI)."},
+ {q:"Le théorème des valeurs intermédiaires (TVI) s'applique si la fonction est :",o:["Dérivable uniquement","Continue sur un intervalle","Strictement croissante","Positive"],a:1,e:"La continuité est l'hypothèse fondamentale du TVI."},
+ {q:"Soit $f$ continue sur $\\mathbb{R}$ telle que $\\lim_{-\\infty} f = -2$ et $\\lim_{+\\infty} f = 5$. L'image de $\\mathbb{R}$ par $f$ contient :",o:["$[-2, 5]$","$]-\\infty, +\\infty[$","$]0, 1[$"," $[-2, 5[$"],a:0,e:"D'après le TVI, l'image d'un intervalle par une fonction continue est un intervalle."},
+ {q:"Peut-on appliquer le TVI à $f(x) = \\frac{1}{x}$ sur $[-1, 1]$ pour montrer que $f(x)=0$ a une solution ?",o:["Oui","Non, car $f$ n'est pas continue en $0$","Non, car $f$ est négative","Oui, car $f(-1)f(1)<0$"],a:1,e:"La fonction n'est pas définie ni continue en $0$ sur cet intervalle."},
+ {q:"Si $f$ est continue et strictement monotone sur $[a, b]$, alors pour tout $k$ entre $f(a)$ et $f(b)$, l'équation $f(x)=k$ a :",o:["Exactement une solution","Au moins deux solutions","Aucune solution","Une infinité"],a:0,e:"La stricte monotonie garantit l'unicité de la solution."}
+];
+
+const ASYMP = [
+ {q:"Asymptotes de $f(x)=\\dfrac{2x+1}{x-3}$ ?",o:["$x=3$ et $y=2$","$x=-3$ et $y=2$","$x=2$ et $y=3$","$y=2$ uniquement"],a:0,e:"Dénominateur nul en $3$ ; limite $2$ en $\\pm\\infty$."},
+ {q:"Asymptotes de $f(x)=\\dfrac{1}{x^2}+4$ ?",o:["$x=0$ et $y=4$","$y=4$ uniquement","$x=4$ et $y=0$","$x=0$ uniquement"],a:0,e:"$\\frac1{x^2}\\to+\\infty$ en $0$ ; $f\\to4$ en $\\pm\\infty$."},
+ {q:"Asymptote de $f(x)=\\ln x$ ?",o:["$y=0$","$x=0$","$x=1$","Aucune"],a:1,e:"$\\lim_{x\\to0^+}\\ln x=-\\infty$ : asymptote verticale $x=0$."},
+ {q:"Asymptote de $f(x)=e^{x}+3$ ?",o:["$y=3$ en $-\\infty$","$y=3$ en $+\\infty$","$x=3$","Aucune"],a:0,e:"$e^x\\to0$ en $-\\infty$ donc $f\\to3$."},
+ {q:"Asymptotes de $f(x)=\\dfrac{x^2+1}{x-1}$ ?",o:["$x=1$ et $y=x+1$","$x=1$ et $y=1$","$y=x$ uniquement","Aucune"],a:0,e:"Division : $f(x)=x+1+\\frac{2}{x-1}$ ; asymptote oblique $y=x+1$."}
+];
+
+const BOSS = [
+ {q:"$\\displaystyle\\lim_{x\\to+\\infty} \\frac{5x^3-2x}{2x^3+7}$",a:["5/2","2.5","2,5"],e:"$\\frac52$ (termes de plus haut degré)."},
+ {q:"$\\displaystyle\\lim_{x\\to+\\infty} \\left(x-\\sqrt{x}\\right)$ <br><small>(écrire +inf, -inf ou un nombre)</small>",a:["+inf","+∞","inf","infini"],e:"$x\\left(1-\\frac1{\\sqrt x}\\right)\\to+\\infty$."},
+ {q:"$\\displaystyle\\lim_{x\\to+\\infty} x\\,e^{-x}$",a:["0"],e:"Croissances comparées."},
+ {q:"$\\displaystyle\\lim_{x\\to1^+} \\frac{1}{1-x}$ <br><small>(écrire +inf, -inf ou un nombre)</small>",a:["-inf","−∞","-∞","-infini"],e:"$1-x\\to0^-$ donc la limite est $-\\infty$."},
+ {q:"$\\displaystyle\\lim_{x\\to+\\infty} \\left(\\sqrt{x^2+x}-x\\right)$",a:["1/2","0.5","0,5"],e:"Conjuguée : $\\frac{x}{\\sqrt{x^2+x}+x}\\to\\frac12$."}
+];
+
+const VF = [
+ {q:"Si $\\displaystyle\\lim_{+\\infty} f=0$, alors la courbe de $f$ ne coupe jamais l'axe des abscisses.",a:false,e:"Faux : ex. $\\frac{\\sin x}{x}$ le coupe une infinité de fois."},
+ {q:"Si $\\displaystyle\\lim_{+\\infty} f=+\\infty$ alors $f$ est croissante au voisinage de $+\\infty$.",a:false,e:"Faux : $x+\\sin x\\to+\\infty$ sans être monotone."},
+ {q:"Une fonction peut avoir deux asymptotes horizontales différentes en $+\\infty$ et en $-\\infty$.",a:true,e:"Vrai : $\\arctan$ admet $y=\\pm\\frac\\pi2$."},
+ {q:"$+\\infty-\\infty$ est toujours égal à $0$.",a:false,e:"Faux : c'est une forme indéterminée."},
+ {q:"Si $\\displaystyle\\lim_{a} f=+\\infty$ alors $\\displaystyle\\lim_{a}\\frac1f=0$.",a:true,e:"Vrai."}
+];
+
+const PAIRS = [
+ ["$x^2$ en $+\\infty$","$+\\infty$"],
+ ["$\\frac1x$ en $+\\infty$","$0$"],
+ ["$\\ln x$ en $0^+$","$-\\infty$"],
+ ["$e^x$ en $-\\infty$","$0$"],
+ ["$\\frac{2x+1}{x-3}$ en $+\\infty$","$2$"],
+ ["$\\frac{\\sin x}{x}$ en $0$","$1$"]
+];
+
+/* ============ OUTILS & ÉTAT ============ */
+const $ = s => document.querySelector(s);
+const shuffle = a => a.map(x=>[Math.random(),x]).sort((p,q)=>p[0]-q[0]).map(x=>x[1]);
+let state = {xp:+localStorage.getItem("lq_xp")||0, badges:JSON.parse(localStorage.getItem("lq_b")||"[]")};
+let inGame = false;
+
+function save(){localStorage.setItem("lq_xp",state.xp);localStorage.setItem("lq_b",JSON.stringify(state.badges))}
+function addBadge(b){if(!state.badges.includes(b)){state.badges.push(b);save()}}
+function levelName(){const x=state.xp;return x<100?"Débutant 🌱":x<300?"Apprenti 📘":x<600?"Calculateur 🧮":x<1000?"Expert 🎓":"Maître des limites 👑"}
+function shuffleQ(q){const idx=shuffle(q.o.map((t,i)=>i));return {...q,o:idx.map(i=>q.o[i]),a:idx.indexOf(q.a)}}
+
+function render(el){
+  const target = el || document.body;
+  if(window.renderMathInElement){
+    renderMathInElement(target,{
+      delimiters:[{left:"$$",right:"$$",display:true},{left:"$",right:"$",display:false}],
+      throwOnError:false
+    });
+  } else { setTimeout(()=>render(el),100); }
+}
+
+function setScreen(html){
+  $("#screen").innerHTML = html;
+  render($("#screen"));
+  document.body.classList.toggle("in-game", inGame);
+}
+
+function goHome(){
+  if(confirm("Quitter la partie et revenir au menu principal ?\n(Les XP déjà gagnés sont conservés)")){
+    inGame = false;
+    menu();
+  }
+}
+
+/* ============ MENU PRINCIPAL ============ */
+function menu(){
+  inGame = false;
+  setScreen(`
+  <div class="card">
+    <div class="bar"><span>Niveau : ${levelName()}</span><span>⭐ ${state.xp} XP</span></div>
+    <div>${state.badges.map(b=>`<span class="badge">${b}</span>`).join("")||"<i>Aucun badge pour l'instant</i>"}</div>
+  </div>
+  <div class="card menu">
+    <h2>Choisis ton mode de jeu</h2>
+    <button onclick="startQuiz(1)">🟢 Quiz – Niveau 1 : Limites usuelles</button>
+    <button onclick="startQuiz(2)">🟡 Quiz – Niveau 2 : Formes indéterminées</button>
+    <button onclick="startQuiz(3)">🔴 Quiz – Niveau 3 : Croissances comparées</button>
+    <button onclick="startContinuity()">📘 Quiz – Continuité &amp; TVI</button>
+    <button onclick="startChrono()">⏱️ Mode Chrono (10 s par question)</button>
+    <button onclick="startAsymp()">📈 Chasse aux asymptotes</button>
+    <button onclick="startDuel()">⚔️ Mode Duel (2 Joueurs)</button>
+    <button onclick="startGeoGebra()">🔍 Visualiseur GeoGebra &amp; Asymptotes</button>
+    <button onclick="startVF()">✅ Vrai ou Faux ?</button>
+    <button onclick="startBoss()">🐉 Duel du Boss (réponses à saisir)</button>
+    <button onclick="startMemory()">🃏 Memory : fonction ↔ limite</button>
+    <button style="background:#94a3b8" onclick="if(confirm('Réinitialiser la progression ?')){state={xp:0,badges:[]};save();menu()}">Réinitialiser</button>
+  </div>`);
+}
+
+/* ============ MOTEUR QCM STANDARD ============ */
+function runQCM(questions,{title,timer=0,xpPer=10,badge=null}){
+  inGame = true;
+  let i=0,score=0,lives=3,t=null;
+  const qs=questions.map(shuffleQ);
+
+  function show(){
+    clearInterval(t);
+    if(!inGame) return;
+    if(i>=qs.length||lives<=0)return end();
+    const q=qs[i];
+    setScreen(`<div class="card">
+      <div class="bar"><span>${title}</span><span>${"❤️".repeat(lives)}</span><span>${i+1}/${qs.length} · ✔ ${score}</span></div>
+      ${timer?'<div class="timer"><div id="tb"></div></div>':''}
+      <div class="q">${q.q}</div>
+      ${q.o.map((o,k)=>`<button class="opt" data-k="${k}">${o}</button>`).join("")}
+      <div id="fb"></div></div>`);
+    document.querySelectorAll(".opt").forEach(b=>b.onclick=()=>answer(+b.dataset.k));
+    if(timer){
+      let left=timer*10;
+      t=setInterval(()=>{
+        if(!inGame){clearInterval(t);return}
+        left--;
+        $("#tb").style.width=(left/(timer*10)*100)+"%";
+        if(left<=0){clearInterval(t);answer(-1)}
+      },100);
+    }
+  }
+
+  function answer(k){
+    clearInterval(t);
+    if(!inGame) return;
+    const q=qs[i],btns=document.querySelectorAll(".opt");
+    btns.forEach(b=>b.onclick=null);
+    btns[q.a].classList.add("ok");
+    if(k===q.a){score++;state.xp+=xpPer}else{lives--;if(k>=0)btns[k].classList.add("ko")}
+    $("#fb").innerHTML=`<div class="fb">${k===q.a?"✅ Bravo !":k<0?"⏰ Temps écoulé !":"❌ Raté."} ${q.e}</div><button class="opt next" id="nx">Suivant ➜</button>`;
+    render($("#fb"));
+    $("#nx").onclick=()=>{i++;show()};
+    save();
+  }
+
+  function end(){
+    inGame = false;
+    const win=score>=Math.ceil(qs.length*0.7);
+    if(win&&badge)addBadge(badge);
+    if(score===qs.length)addBadge("💯 Sans faute – "+title);
+    save();
+    setScreen(`<div class="card" style="text-align:center">
+      <h2>${lives<=0?"💀 Plus de vies !":win?"🏆 Victoire !":"Fin de partie"}</h2>
+      <p style="font-size:1.3em">Score : ${score}/${qs.length}</p>
+      <p>${win&&badge?"Badge débloqué : "+badge:""}</p>
+      <div class="menu"><button onclick="menu()">Retour au menu</button></div></div>`);
+  }
+  show();
+}
+
+function startQuiz(l){
+  const pool=shuffle(QCM.filter(q=>q.lvl===l)).slice(0,8);
+  runQCM(pool,{title:"Niveau "+l,xpPer:10*l,badge:["","🥉 Niveau 1","🥈 Niveau 2","🥇 Niveau 3"][l]});
+}
+function startContinuity(){
+  runQCM(shuffle(CONTINUITY),{title:"Continuité & TVI",xpPer:15,badge:"📘 Maître du TVI"});
+}
+function startChrono(){runQCM(shuffle(QCM).slice(0,10),{title:"Chrono",timer:10,xpPer:20,badge:"⚡ Éclair"})}
+function startAsymp(){runQCM(shuffle(ASYMP),{title:"Asymptotes",xpPer:15,badge:"📈 Chasseur d'asymptotes"})}
+
+/* ============ MODE DUEL 2 JOUEURS ============ */
+function startDuel(){
+  inGame = true;
+  const qs = shuffle(QCM).slice(0, 10);
+  let i = 0, p1Score = 0, p2Score = 0, turn = 1;
+
+  function show(){
+    if(!inGame) return;
+    if(i >= qs.length) return end();
+    const q = qs[i];
+    setScreen(`<div class="card">
+      <div class="bar"><span>⚔️ Mode Duel</span><span style="color:${turn===1?'#4338ca':'#dc2626'}">Tour du Joueur ${turn} (${turn===1?'🔵':'🔴'})</span><span>Q ${i+1}/${qs.length}</span></div>
+      <div style="display:flex;justify-content:space-around;font-weight:bold;margin-bottom:10px">
+        <span style="color:#4338ca">Joueur 1 : ${p1Score} pts</span>
+        <span style="color:#dc2626">Joueur 2 : ${p2Score} pts</span>
+      </div>
+      <div class="q">${q.q}</div>
+      ${q.o.map((o,k)=>`<button class="opt" data-k="${k}">${o}</button>`).join("")}
+      <div id="fb"></div></div>`);
+    document.querySelectorAll(".opt").forEach(b=>b.onclick=()=>answer(+b.dataset.k));
+  }
+
+  function answer(k){
+    if(!inGame) return;
+    const q=qs[i], btns=document.querySelectorAll(".opt");
+    btns.forEach(b=>b.onclick=null);
+    btns[q.a].classList.add("ok");
+    const correct = (k === q.a);
+    if(correct){
+      if(turn === 1) p1Score++; else p2Score++;
+    } else if(k >= 0){
+      btns[k].classList.add("ko");
+    }
+    $("#fb").innerHTML=`<div class="fb">${correct?"✅ Bonne réponse pour J"+turn+" !":"❌ Raté."} ${q.e}</div><button class="opt next" id="nx">Joueur suivant ➜</button>`;
+    render($("#fb"));
+    $("#nx").onclick = () => {
+      turn = turn === 1 ? 2 : 1;
+      if(turn === 1) i++;
+      show();
+    };
+  }
+
+  function end(){
+    inGame = false;
+    let winner = p1Score > p2Score ? "🏆 Victoire du Joueur 1 (🔵) !" : p2Score > p1Score ? "🏆 Victoire du Joueur 2 (🔴) !" : "🤝 Égalité parfaite !";
+    state.xp += 30; addBadge("⚔️ Duelliste"); save();
+    setScreen(`<div class="card" style="text-align:center">
+      <h2>Fin du Duel !</h2>
+      <p style="font-size:1.4em;font-weight:bold">${winner}</p>
+      <p>Score final : J1 (${p1Score}) - J2 (${p2Score})</p>
+      <div class="menu"><button onclick="menu()">Retour au menu</button></div></div>`);
+  }
+  show();
+}
+
+/* ============ VISUALISEUR GEOGEBRA & ASYMPTOTES ============ */
+function startGeoGebra(){
+  inGame = true;
+  setScreen(`<div class="card">
+    <h2>Visualiseur GeoGebra &amp; Asymptotes</h2>
+    <p>Explore les fonctions et leurs asymptotes dynamiquement :</p>
+    <div class="menu" style="display:flex;gap:8px;flex-wrap:wrap">
+      <button onclick="loadGGB('f(x)=(2x+1)/(x-3)')" style="flex:1">$\\displaystyle f(x)=\\frac{2x+1}{x-3}$</button>
+      <button onclick="loadGGB('f(x)=e^x+3')" style="flex:1">$\\displaystyle f(x)=e^x+3$</button>
+      <button onclick="loadGGB('f(x)=(x^2+1)/(x-1)')" style="flex:1">$\\displaystyle f(x)=\\frac{x^2+1}{x-1}$</button>
+    </div>
+    <div class="ggb-container">
+      <iframe id="ggbFrame" src="https://www.geogebra.org/classic?embed&amp;showToolBar=false&amp;showAlgebraInput=false&amp;showMenuBar=false"></iframe>
+    </div>
+    <div id="ggbDesc" class="fb" style="font-size:1.05em">Sélectionne une fonction ci-dessus pour afficher son analyse.</div>
+    <div class="menu" style="margin-top:15px"><button class="back" onclick="menu()">⬅ Menu</button></div>
+  </div>`);
+  render($("#screen"));
+}
+
+function loadGGB(expr){
+  // Met à jour la description en LaTeX selon la fonction choisie
+  let desc = "";
+  if(expr.includes("2x+1")){
+    desc = "<b>Analyse de $\\displaystyle f(x) = \\frac{2x+1}{x-3}$</b><br>• Asymptote verticale : $\\mathbf{x = 3}$<br>• Asymptote horizontale en $\\pm\\infty$ : $\\mathbf{y = 2}$";
+  } else if(expr.includes("e^x")){
+    desc = "<b>Analyse de $\\displaystyle f(x) = e^x + 3$</b><br>• Asymptote horizontale en $-\\infty$ : $\\mathbf{y = 3}$<br>• Croissance exponentielle rapide en $+\\infty$";
+  } else {
+    desc = "<b>Analyse de $\\displaystyle f(x) = \\frac{x^2+1}{x-1} = x + 1 + \\frac{2}{x-1}$</b><br>• Asymptote verticale : $\\mathbf{x = 1}$<br>• Asymptote oblique en $\\pm\\infty$ : $\\mathbf{y = x + 1}$";
+  }
+  $("#ggbDesc").innerHTML = desc;
+  render($("#ggbDesc"));
+}
+
+/* ============ VRAI / FAUX ============ */
+function startVF(){
+  inGame = true;
+  const qs=shuffle(VF).slice(0,8);let i=0,score=0;
+  function show(){
+    if(i>=qs.length){
+      inGame=false;
+      if(score>=4)addBadge("🧠 Esprit critique");save();
+      return setScreen(`<div class="card" style="text-align:center"><h2>Score : ${score}/${qs.length}</h2><div class="menu"><button onclick="menu()">Menu</button></div></div>`)
+    }
+    setScreen(`<div class="card"><div class="bar"><span>Vrai ou Faux</span><span>${i+1}/${qs.length}</span></div>
+      <div class="q">${qs[i].q}</div>
+      <button class="opt" id="v">✅ Vrai</button><button class="opt" id="f">❌ Faux</button><div id="fb"></div></div>`);
+    $("#v").onclick=()=>rep(true);$("#f").onclick=()=>rep(false);
+  }
+  function rep(r){
+    const ok=r===qs[i].a;if(ok){score++;state.xp+=10}save();
+    $("#v").onclick=$("#f").onclick=null;
+    $("#fb").innerHTML=`<div class="fb">${ok?"✅ Exact !":"❌ Non."} ${qs[i].e}</div><button class="opt next" id="nx">Suivant ➜</button>`;
+    render($("#fb"));
+    $("#nx").onclick=()=>{i++;show()};
+  }
+  show();
+}
+
+/* ============ DUEL DU BOSS ============ */
+function startBoss(){
+  inGame = true;
+  const qs=shuffle(BOSS);let i=0,hp=100,me=3;const dmg=100/qs.length;
+  const norm=s=>s.toLowerCase().replace(/\s/g,"").replace("−","-");
+  function show(msg=""){
+    if(hp<=1){
+      inGame=false;
+      addBadge("🐉 Tueur de Boss");state.xp+=100;save();
+      return setScreen(`<div class="card" style="text-align:center"><h2>🎉 Le Boss est vaincu ! +100 XP</h2><div class="menu"><button onclick="menu()">Menu</button></div></div>`)
+    }
+    if(me<=0||i>=qs.length){
+      inGame=false;
+      return setScreen(`<div class="card" style="text-align:center"><h2>💀 Le Boss t'a vaincu…</h2><p>Révise et reviens !</p><div class="menu"><button onclick="menu()">Menu</button></div></div>`)
+    }
+    setScreen(`<div class="card">
+      <div class="bar"><span>🐉 Boss Infini</span><span>Toi : ${"❤️".repeat(me)}</span></div>
+      <div class="boss-hp"><div style="width:${hp}%"></div></div>
+      ${msg?`<div class="fb">${msg}</div>`:""}
+      <div class="q">${qs[i].q}</div>
+      <input type="text" id="ans" placeholder="Ta réponse (ex : 3/2, 0, +inf, -inf)" autofocus>
+      <button class="opt next" id="go">⚔️ Attaquer</button></div>`);
+    $("#ans").addEventListener("keydown",e=>{if(e.key==="Enter")$("#go").click()});
+    $("#go").onclick=()=>{
+      const v=norm($("#ans").value);const ok=qs[i].a.map(norm).includes(v);
+      const e=qs[i].e;i++;
+      if(ok){hp-=dmg;state.xp+=15;save();show("✅ Touché ! "+e)}else{me--;show("❌ Raté. "+e)}
+    };
+  }
+  show();
+}
+
+/* ============ MEMORY ============ */
+function startMemory(){
+  inGame = true;
+  let cards=[];PAIRS.forEach((p,k)=>{cards.push({id:k,t:p[0]});cards.push({id:k,t:p[1]})});
+  cards=shuffle(cards);let open=[],found=0,moves=0,lock=false;
+  setScreen(`<div class="card"><div class="bar"><span>Memory</span><span id="mv">Coups : 0</span></div>
+    <div id="grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px"></div>
+    <div class="menu"><button class="back" onclick="menu()">⬅ Menu</button></div></div>`);
+  const grid=$("#grid");
+  cards.forEach(c=>{
+    const b=document.createElement("button");
+    b.className="mem";b.textContent="?";
+    b.onclick=()=>{
+      if(lock||b.dataset.done||open.includes(b))return;
+      b.innerHTML=c.t;render(b);b.style.background="#fbbf24";b.style.color="#1e1b4b";open.push(b);b._c=c;
+      if(open.length===2){
+        moves++;$("#mv").textContent="Coups : "+moves;
+        const [x,y]=open;
+        if(x._c.id===y._c.id){
+          x.dataset.done=y.dataset.done=1;
+          x.style.background=y.style.background="#22c55e";
+          x.style.color=y.style.color="#fff";
+          open=[];found++;
+          if(found===PAIRS.length){
+            state.xp+=50;addBadge("🃏 Mémoire d'éléphant");save();
+            setTimeout(()=>alert("Bravo en "+moves+" coups ! +50 XP"),200);
+          }
+        } else {
+          lock=true;
+          setTimeout(()=>{
+            open.forEach(z=>{z.textContent="?";z.style.background="#6366f1";z.style.color="#fff"});
+            open=[];lock=false;
+          },1000);
+        }
+      }
+    };
+    grid.appendChild(b);
+  });
+}
+
+window.addEventListener("load",menu);
+</script>
+</body>
+</html>
