@@ -47,12 +47,20 @@
 
 <script>
 /* ============ GESTIONNAIRE AUDIO (Web Audio API) ============ */
-const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+let audioCtx = null;
 
-function playSound(type) {
+function initAudio() {
+  if (!audioCtx) {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
   if (audioCtx.state === 'suspended') {
     audioCtx.resume();
   }
+}
+
+function playSound(type) {
+  initAudio();
+  if (!audioCtx) return;
   const now = audioCtx.currentTime;
   const osc = audioCtx.createOscillator();
   const gain = audioCtx.createGain();
@@ -60,44 +68,39 @@ function playSound(type) {
   gain.connect(audioCtx.destination);
 
   if (type === 'success') {
-    // Accord montant joyeux
     osc.type = 'triangle';
-    osc.frequency.setValueAtTime(440, now); // La4
-    osc.frequency.setValueAtTime(554.37, now + 0.1); // Do#5
-    osc.frequency.setValueAtTime(659.25, now + 0.2); // Mi5
-    gain.gain.setValueAtTime(0.2, now);
+    osc.frequency.setValueAtTime(523.25, now);
+    osc.frequency.setValueAtTime(659.25, now + 0.1);
+    osc.frequency.setValueAtTime(783.99, now + 0.2);
+    gain.gain.setValueAtTime(0.3, now);
     gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
     osc.start(now);
     osc.stop(now + 0.4);
   } else if (type === 'error') {
-    // Son grave descendant
     osc.type = 'sawtooth';
-    osc.frequency.setValueAtTime(180, now);
+    osc.frequency.setValueAtTime(200, now);
     osc.frequency.linearRampToValueAtTime(100, now + 0.3);
-    gain.gain.setValueAtTime(0.2, now);
+    gain.gain.setValueAtTime(0.3, now);
     gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
     osc.start(now);
     osc.stop(now + 0.3);
   } else if (type === 'click') {
-    // Petit déclic
     osc.type = 'sine';
-    osc.frequency.setValueAtTime(600, now);
-    gain.gain.setValueAtTime(0.1, now);
+    osc.frequency.setValueAtTime(800, now);
+    gain.gain.setValueAtTime(0.15, now);
     gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
     osc.start(now);
     osc.stop(now + 0.05);
   } else if (type === 'hit') {
-    // Impact tranchant (Boss)
     osc.type = 'square';
-    osc.frequency.setValueAtTime(120, now);
-    osc.frequency.exponentialRampToValueAtTime(40, now + 0.2);
-    gain.gain.setValueAtTime(0.3, now);
+    osc.frequency.setValueAtTime(150, now);
+    osc.frequency.exponentialRampToValueAtTime(50, now + 0.2);
+    gain.gain.setValueAtTime(0.4, now);
     gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
     osc.start(now);
     osc.stop(now + 0.2);
   } else if (type === 'win') {
-    // Fanfare de victoire
-    const notes = [523.25, 659.25, 783.99, 1046.50]; // Do5, Mi5, Sol5, Do6
+    const notes = [523.25, 659.25, 783.99, 1046.50];
     notes.forEach((freq, idx) => {
       const o = audioCtx.createOscillator();
       const g = audioCtx.createGain();
@@ -105,7 +108,7 @@ function playSound(type) {
       g.connect(audioCtx.destination);
       o.type = 'triangle';
       o.frequency.setValueAtTime(freq, now + idx * 0.12);
-      g.gain.setValueAtTime(0.2, now + idx * 0.12);
+      g.gain.setValueAtTime(0.3, now + idx * 0.12);
       g.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.12 + 0.3);
       o.start(now + idx * 0.12);
       o.stop(now + idx * 0.12 + 0.3);
@@ -125,7 +128,7 @@ const QCM = [
  {lvl:1,q:"$\\displaystyle\\lim_{x\\to+\\infty} \\ln x$",o:["$0$","$+\\infty$","$-\\infty$","$e$"],a:1,e:"$\\ln$ croît lentement mais tend vers $+\\infty$."},
  {lvl:1,q:"$\\displaystyle\\lim_{x\\to0^+} \\ln x$",o:["$+\\infty$","$0$","$-\\infty$","$1$"],a:2,e:"$\\ln x\\to-\\infty$ : asymptote verticale $x=0$."},
  {lvl:1,q:"$\\displaystyle\\lim_{x\\to+\\infty} \\sqrt{x}$",o:["$0$","$+\\infty$","$1$","$-\\infty$"],a:1,e:"La racine carrée tend vers $+\\infty$."},
- 
+
  {lvl:2,q:"$\\displaystyle\\lim_{x\\to+\\infty} (x^2-3x+1)$",o:["$-\\infty$","$0$","$+\\infty$","$1$"],a:2,e:"FI « $\\infty-\\infty$ » : $x^2\\left(1-\\frac3x+\\frac1{x^2}\\right)\\to+\\infty$."},
  {lvl:2,q:"$\\displaystyle\\lim_{x\\to+\\infty} \\frac{2x+1}{x-3}$",o:["$+\\infty$","$2$","$1$","$0$"],a:1,e:"Quotient des termes de plus haut degré : $\\frac{2x}{x}=2$."},
  {lvl:2,q:"$\\displaystyle\\lim_{x\\to+\\infty} \\frac{3x^2+1}{x^3+2}$",o:["$3$","$+\\infty$","$0$","$1$"],a:2,e:"Degré du dénominateur supérieur $\\Rightarrow$ limite $0$."},
@@ -147,12 +150,47 @@ const QCM = [
  {lvl:3,q:"$\\displaystyle\\lim_{x\\to+\\infty} e^{-x^2}$",o:["$+\\infty$","$1$","$0$","$-\\infty$"],a:2,e:"Composition : $-x^2\\to-\\infty$ puis $e^{X}\\to0$ quand $X\\to-\\infty$."}
 ];
 
+/* Continuité & TVI – conforme au programme de Terminale (sans « image d'un intervalle ») */
 const CONTINUITY = [
- {q:"Si $f$ est continue sur $[a, b]$ et $f(a)f(b) < 0$, alors l'équation $f(x)=0$ admet :",o:["Au moins une solution dans $]a, b[$","Exactement une solution","Aucune solution","Une infinité de solutions"],a:0,e:"C'est le corollaire du théorème des valeurs intermédiaires (TVI)."},
- {q:"Le théorème des valeurs intermédiaires (TVI) s'applique si la fonction est :",o:["Dérivable uniquement","Continue sur un intervalle","Strictement croissante","Positive"],a:1,e:"La continuité est l'hypothèse fondamentale du TVI."},
- {q:"Soit $f$ continue sur $\\mathbb{R}$ telle que $\\lim_{-\\infty} f = -2$ et $\\lim_{+\\infty} f = 5$. L'image de $\\mathbb{R}$ par $f$ contient :",o:["$[-2, 5]$","$]-\\infty, +\\infty[$","$]0, 1[$"," $[-2, 5[$"],a:0,e:"D'après le TVI, l'image d'un intervalle par une fonction continue est un intervalle."},
- {q:"Peut-on appliquer le TVI à $f(x) = \\frac{1}{x}$ sur $[-1, 1]$ pour montrer que $f(x)=0$ a une solution ?",o:["Oui","Non, car $f$ n'est pas continue en $0$","Non, car $f$ est négative","Oui, car $f(-1)f(1)<0$"],a:1,e:"La fonction n'est pas définie ni continue en $0$ sur cet intervalle."},
- {q:"Si $f$ est continue et strictement monotone sur $[a, b]$, alors pour tout $k$ entre $f(a)$ et $f(b)$, l'équation $f(x)=k$ a :",o:["Exactement une solution","Au moins deux solutions","Aucune solution","Une infinité"],a:0,e:"La stricte monotonie garantit l'unicité de la solution."}
+ {q:"Soit $f$ continue sur $[a,b]$ et $k$ un réel compris entre $f(a)$ et $f(b)$. D'après le théorème des valeurs intermédiaires, l'équation $f(x)=k$ admet :",
+  o:["Au moins une solution dans $[a,b]$","Exactement une solution dans $[a,b]$","Aucune solution dans $[a,b]$","Une infinité de solutions dans $[a,b]$"],
+  a:0,e:"Le TVI garantit l'existence d'au moins une solution, mais pas son unicité."},
+
+ {q:"Si $f$ est continue sur $[a,b]$ et si $f(a)\\times f(b)<0$, alors l'équation $f(x)=0$ admet :",
+  o:["Au moins une solution dans $]a,b[$","Exactement une solution","Aucune solution","Une infinité de solutions"],
+  a:0,e:"$f(a)$ et $f(b)$ sont de signes contraires, donc $0$ est compris entre $f(a)$ et $f(b)$ : on applique le TVI."},
+
+ {q:"Le théorème des valeurs intermédiaires s'applique si la fonction est :",
+  o:["Dérivable uniquement","Continue sur un intervalle","Strictement croissante","Positive"],
+  a:1,e:"La continuité sur l'intervalle est l'hypothèse indispensable du TVI."},
+
+ {q:"Peut-on appliquer le TVI à $f(x)=\\dfrac{1}{x}$ sur $[-1,1]$ pour montrer que $f(x)=0$ a une solution ?",
+  o:["Oui, car $f(-1)\\times f(1)<0$","Non, car $f$ n'est pas continue en $0$","Non, car $f$ est négative sur $[-1,0[$","Oui, car $f$ est définie sur $\\mathbb{R}$"],
+  a:1,e:"$f$ n'est pas définie en $0\\in[-1,1]$ : elle n'est donc pas continue sur $[-1,1]$. De fait, $\\frac1x=0$ n'a aucune solution."},
+
+ {q:"Soit $f$ <b>continue et strictement croissante</b> sur $[a,b]$, et $k$ compris entre $f(a)$ et $f(b)$. L'équation $f(x)=k$ admet :",
+  o:["Exactement une solution dans $[a,b]$","Au moins deux solutions","Aucune solution","On ne peut pas conclure"],
+  a:0,e:"Corollaire du TVI (cas strictement monotone) : la stricte monotonie ajoute l'unicité de la solution."},
+
+ {q:"Pour montrer que l'équation $x^3+x-1=0$ admet une solution unique dans $[0,1]$, on utilise :",
+  o:["Le TVI seul","Le corollaire du TVI : continuité et stricte monotonie","Le théorème des gendarmes","Le théorème de comparaison"],
+  a:1,e:"$f(x)=x^3+x-1$ est continue et strictement croissante ($f'(x)=3x^2+1>0$), avec $f(0)=-1<0<1=f(1)$."},
+
+ {q:"Soit $f(x)=x^2-2$ sur $[1,2]$. On a $f(1)=-1$ et $f(2)=2$. Que peut-on conclure ?",
+  o:["$f(x)=0$ admet au moins une solution dans $[1,2]$","$f(x)=0$ n'a pas de solution","$f$ est décroissante","$f(x)=0$ a deux solutions dans $[1,2]$"],
+  a:0,e:"$f$ est continue sur $[1,2]$ et $0$ est compris entre $f(1)$ et $f(2)$ : le TVI donne une solution (ici $\\sqrt2$)."},
+
+ {q:"Soit $f$ continue sur $[0,3]$ avec $f(0)=4$ et $f(3)=-2$. L'équation $f(x)=1$ admet-elle au moins une solution dans $[0,3]$ ?",
+  o:["Oui, car $1$ est compris entre $f(3)$ et $f(0)$","Non, car $f(0)>f(3)$","Non, car $1\\neq 0$","On ne peut pas savoir"],
+  a:0,e:"Le TVI s'applique aussi pour une fonction décroissante : $-2\\le 1\\le 4$."},
+
+ {q:"Soit $f$ continue sur $[a,b]$ avec $f(a)>0$ et $f(b)>0$. Peut-on affirmer que $f(x)=0$ n'a pas de solution ?",
+  o:["Oui, toujours","Non, $f$ peut s'annuler entre $a$ et $b$","Oui, car $f$ est continue","Oui, car $f$ est positive"],
+  a:1,e:"Le TVI ne permet pas de conclure ici : par exemple $f(x)=(x-1)^2$ sur $[0,2]$ s'annule en $1$ avec $f(0)=1>0$ et $f(2)=1>0$."},
+
+ {q:"Sur $[a,b]$, $f$ est continue et strictement décroissante, avec $f(a)=5$ et $f(b)=-3$. Combien de solutions a $f(x)=0$ ?",
+  o:["Exactement une","Aucune","Au moins deux","On ne peut pas savoir"],
+  a:0,e:"Continuité + stricte monotonie + $0\\in[-3,5]$ : le corollaire du TVI donne une unique solution."}
 ];
 
 const ASYMP = [
@@ -176,7 +214,10 @@ const VF = [
  {q:"Si $\\displaystyle\\lim_{+\\infty} f=+\\infty$ alors $f$ est croissante au voisinage de $+\\infty$.",a:false,e:"Faux : $x+\\sin x\\to+\\infty$ sans être monotone."},
  {q:"Une fonction peut avoir deux asymptotes horizontales différentes en $+\\infty$ et en $-\\infty$.",a:true,e:"Vrai : $\\arctan$ admet $y=\\pm\\frac\\pi2$."},
  {q:"$+\\infty-\\infty$ est toujours égal à $0$.",a:false,e:"Faux : c'est une forme indéterminée."},
- {q:"Si $\\displaystyle\\lim_{a} f=+\\infty$ alors $\\displaystyle\\lim_{a}\\frac1f=0$.",a:true,e:"Vrai."}
+ {q:"Si $\\displaystyle\\lim_{a} f=+\\infty$ alors $\\displaystyle\\lim_{a}\\frac1f=0$.",a:true,e:"Vrai."},
+ {q:"Une fonction continue sur $[a,b]$ qui change de signe entre $a$ et $b$ s'annule au moins une fois sur $[a,b]$.",a:true,e:"Vrai : c'est le TVI avec $k=0$."},
+ {q:"Si $f$ est continue et strictement monotone sur $[a,b]$ avec $f(a)f(b)<0$, alors $f(x)=0$ admet une unique solution.",a:true,e:"Vrai : corollaire du TVI (bijection)."},
+ {q:"Toute fonction dérivable sur un intervalle $I$ est continue sur $I$.",a:true,e:"Vrai : dérivabilité $\\Rightarrow$ continuité (la réciproque est fausse)."}
 ];
 
 const PAIRS = [
@@ -226,7 +267,6 @@ function goHome(){
 /* ============ MENU PRINCIPAL ============ */
 function menu(){
   inGame = false;
-  playSound('click');
   setScreen(`
   <div class="card">
     <div class="bar"><span>Niveau : ${levelName()}</span><span>⭐ ${state.xp} XP</span></div>
@@ -234,17 +274,18 @@ function menu(){
   </div>
   <div class="card menu">
     <h2>Choisis ton mode de jeu</h2>
-    <button onclick="playSound('click');startQuiz(1)">🟢 Quiz – Niveau 1 : Limites usuelles</button>
-    <button onclick="playSound('click');startQuiz(2)">🟡 Quiz – Niveau 2 : Formes indéterminées</button>
-    <button onclick="playSound('click');startQuiz(3)">🔴 Quiz – Niveau 3 : Croissances comparées</button>
-    <button onclick="playSound('click');startContinuity()">📘 Quiz – Continuité &amp; TVI</button>
-    <button onclick="playSound('click');startChrono()">⏱️ Mode Chrono (10 s par question)</button>
-    <button onclick="playSound('click');startAsymp()">📈 Chasse aux asymptotes</button>
-    <button onclick="playSound('click');startDuel()">⚔️ Mode Duel (2 Joueurs)</button>
-    <button onclick="playSound('click');startGeoGebra()">🔍 Visualiseur GeoGebra &amp; Asymptotes</button>
-    <button onclick="playSound('click');startVF()">✅ Vrai ou Faux ?</button>
-    <button onclick="playSound('click');startBoss()">🐉 Duel du Boss (réponses à saisir)</button>
-    <button onclick="playSound('click');startMemory()">🃏 Memory : fonction ↔ limite</button>
+    <button onclick="playSound('success');startQuiz(1)">🟢 Quiz – Niveau 1 : Limites usuelles</button>
+    <button onclick="playSound('success');startQuiz(2)">🟡 Quiz – Niveau 2 : Formes indéterminées</button>
+    <button onclick="playSound('success');startQuiz(3)">🔴 Quiz – Niveau 3 : Croissances comparées</button>
+    <button onclick="playSound('success');startContinuity()">📘 Quiz – Continuité &amp; TVI</button>
+    <button onclick="playSound('success');startChrono()">⏱️ Mode Chrono (10 s par question)</button>
+    <button onclick="playSound('success');startAsymp()">📈 Chasse aux asymptotes</button>
+    <button onclick="playSound('success');startDuel()">⚔️ Mode Duel (2 Joueurs)</button>
+    <button onclick="playSound('success');startGeoGebra()">🔍 Visualiseur GeoGebra &amp; Asymptotes</button>
+    <button onclick="playSound('success');startVF()">✅ Vrai ou Faux ?</button>
+    <button onclick="playSound('success');startBoss()">🐉 Duel du Boss (réponses à saisir)</button>
+    <button onclick="playSound('success');startMemory()">🃏 Memory : fonction ↔ limite</button>
+    <button style="background:#f59e0b" onclick="playSound('success')">🔊 Tester le son</button>
     <button style="background:#94a3b8" onclick="playSound('click');if(confirm('Réinitialiser la progression ?')){state={xp:0,badges:[]};save();menu()}">Réinitialiser</button>
   </div>`);
 }
